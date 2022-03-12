@@ -75,4 +75,6 @@ setArmStatusHome(self, code):
 #setSmartPlug(self, deviceLabel, state):
 #getSmartplugState(self, devicelabel):
 
+vs.logout()
+
 
