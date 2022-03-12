@@ -78,8 +78,12 @@ class Verisure:
         with open(os.path.expanduser(cookieFileName), 'wb') as f:
             pickle.dump(self.session.cookies, f)
 
+    def logout(self):
 
+        response = self.session.delete("https://m-api01.verisure.com/auth/logout", headers=self.headers)
+        response.raise_for_status()
 
+        
     def getAllInstallations(self):
 
         body =  [{
