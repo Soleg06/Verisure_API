@@ -697,12 +697,16 @@ class Verisure:
         return out
 
 
-    def _doRequest(self, body):
+     def _doRequest(self, body):
 
-        response = self.session.post("https://m-api01.verisure.com/graphql", headers=self.headers, data = json.dumps(list(body)))
-        response.raise_for_status()
-        response.encoding = 'utf-8'
-        return json.loads(response.text)
+        urls =["https://m-api01.verisure.com/graphql",
+                "https://m-api02.verisure.com/graphql"]
 
+        for url in urls:
+            response = self.session.post(url, headers=self.headers, data = json.dumps(list(body)))
+            response.raise_for_status()
+            response.encoding = 'utf-8'
+            if 'errors' not in json.loads(response.text):
+                return json.loads(response.text)
 
 
