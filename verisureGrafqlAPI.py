@@ -24,7 +24,10 @@ class Verisure:
             }
 
 
-    def login(self, mfa:bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
+      def login(self, mfa:bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
+
+        urls =["https://m-api01.verisure.com/auth/login",
+                "https://m-api02.verisure.com/auth/login"]
 
         self.username = username
         if mfa:
@@ -35,13 +38,18 @@ class Verisure:
                     #session cookies set now
             except:
                 print("No tokenfile found \n")
-            response = self.session.post("https://m-api01.verisure.com/auth/login", headers=self.headers, auth=(username, password))
-            response.raise_for_status()
-            self.getAllInstallations()
+
+            for url in urls:
+                response = self.session.post(url, headers=self.headers, auth=(username, password))
+                response.raise_for_status()
+                if 'errors' not in json.loads(response.text):
+                    self.getAllInstallations()
         else:
-            response = self.session.post("https://m-api01.verisure.com/auth/login", headers=self.headers, auth=(username, password))
-            response.raise_for_status()
-            self.getAllInstallations()
+            for url in urls:
+                response = self.session.post(url, headers=self.headers, auth=(username, password))
+                response.raise_for_status()
+                if 'errors' not in json.loads(response.text):
+                    self.getAllInstallations()
 
 
     def getMfaToken(self, username, password, cookieFileName='~/.verisure_mfa_cookie'):
@@ -78,12 +86,40 @@ class Verisure:
         with open(os.path.expanduser(cookieFileName), 'wb') as f:
             pickle.dump(self.session.cookies, f)
 
-    def logout(self):
+            
+    def renewToken(self):
 
-        response = self.session.delete("https://m-api01.verisure.com/auth/logout", headers=self.headers)
-        response.raise_for_status()
+        urls =["https://m-api01.verisure.com/auth/token",
+                "https://m-api02.verisure.com/auth/token"]
 
-        
+        for url in urls:
+            response = self.session.post(url, headers=self.headers, auth=(username, password))
+            response.raise_for_status()
+            
+            
+   def logout(self):
+
+        urls =["https://m-api01.verisure.com/auth/delete",
+                "https://m-api02.verisure.com/auth/delete"]
+
+        for url in urls:
+            response = self.session.delete(url, headers=self.headers)
+            response.raise_for_status()
+
+
+    def _doRequest(self, body):
+
+        urls =["https://m-api01.verisure.com/graphql",
+                "https://m-api02.verisure.com/graphql"]
+
+        for url in urls:
+            response = self.session.post(url, headers=self.headers, data = json.dumps(list(body)))
+            response.raise_for_status()
+            response.encoding = 'utf-8'
+            if 'errors' not in json.loads(response.text):
+                return json.loads(response.text)
+
+            
     def getAllInstallations(self):
 
         body =  [{
@@ -695,18 +731,5 @@ class Verisure:
             out[name] = d["currentState"]
 
         return out
-
-
-     def _doRequest(self, body):
-
-        urls =["https://m-api01.verisure.com/graphql",
-                "https://m-api02.verisure.com/graphql"]
-
-        for url in urls:
-            response = self.session.post(url, headers=self.headers, data = json.dumps(list(body)))
-            response.raise_for_status()
-            response.encoding = 'utf-8'
-            if 'errors' not in json.loads(response.text):
-                return json.loads(response.text)
-
+    
 
