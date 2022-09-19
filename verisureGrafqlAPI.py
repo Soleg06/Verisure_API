@@ -7,12 +7,46 @@ import arrow
 import os
 import pickle
 from pprint import pprint
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+
+DEFAULT_TIMEOUT = 20 # seconds
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+
+    def __init__(self, *args, **kwargs):
+        self.timeout = DEFAULT_TIMEOUT
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
+            del kwargs["timeout"]
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None:
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
+
 
 class Verisure:
 
     def __init__(self):
 
         self.session = requests.Session()
+
+        assert_status_hook = lambda response, *args, **kwargs: response.raise_for_status()
+        self.session.hooks["response"].append(assert_status_hook)
+
+        retry_strategy = Retry(
+                total=10,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+                method_whitelist=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "¨TRACE", "POST"])
+
+        self.session.mount("http://", TimeoutHTTPAdapter(max_retries=retry_strategy))
+        self.session.mount("https://", TimeoutHTTPAdapter(max_retries=retry_strategy))
+
         self.username = None
         self.giid = None
         self.applicationID = "Python"
@@ -24,7 +58,12 @@ class Verisure:
             }
 
 
-      def login(self, mfa:bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
+    #def __del__(self):
+
+    #    self.logout()
+
+
+    def login(self, mfa:bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
 
         urls =["https://m-api01.verisure.com/auth/login",
                 "https://m-api02.verisure.com/auth/login"]
@@ -41,15 +80,31 @@ class Verisure:
 
             for url in urls:
                 response = self.session.post(url, headers=self.headers, auth=(username, password))
-                response.raise_for_status()
+                #response.raise_for_status()
                 if 'errors' not in json.loads(response.text):
                     self.getAllInstallations()
         else:
-            for url in urls:
-                response = self.session.post(url, headers=self.headers, auth=(username, password))
-                response.raise_for_status()
+            try:
+                response = self.session.post(urls[0], headers=self.headers, auth=(username, password))
+                #pprint(json.loads(response.text))
+                print("login ")
+                print(urls[0])
+                #response.raise_for_status()
                 if 'errors' not in json.loads(response.text):
                     self.getAllInstallations()
+
+            except:
+                try:
+                    response = self.session.post(urls[1], headers=self.headers, auth=(username, password))
+                    #pprint(json.loads(response.text))
+                    #response.raise_for_status()
+                    print("login exept ")
+                    print(urls[1])
+                    if 'errors' not in json.loads(response.text):
+                        self.getAllInstallations()
+                except Exception as e:
+                    print("error in _login exept")
+                    print(e)
 
 
     def getMfaToken(self, username, password, cookieFileName='~/.verisure_mfa_cookie'):
@@ -58,11 +113,11 @@ class Verisure:
 
         #Step 1: call auth/login with username and password and get a stepUpToken in reply valid 1200 seconds i.e. 20 minutes
         response = self.session.post("https://m-api01.verisure.com/auth/login", headers=self.headers, auth=(username, password))
-        response.raise_for_status()
+        #response.raise_for_status()
 
         #Step 2: call  auth/mfa and Verisure vill send you a SMS with a code valid for 300 seconds i.e 5 minutes
         response = self.session.post("https://m-api01.verisure.com/auth/mfa", headers=self.headers)
-        response.raise_for_status()
+        #response.raise_for_status()
 
         smsToken = input("Enter code sent by SMS: ")
         tok = dict()
@@ -70,12 +125,12 @@ class Verisure:
 
         #Step 3: call auth/mfa/validate with the SMS code and get an accesstoken in reply
         response = self.session.post("https://m-api01.verisure.com/auth/mfa/validate", headers=self.headers, data= json.dumps(tok))
-        response.raise_for_status()
+        #response.raise_for_status()
         #session.cookies contains stepUpCookie, vid, vs-access and vs-refresh
 
         #Step 4:  call auth/trust and get the trust token
         response = self.session.post("https://m-api01.verisure.com/auth/trust", headers=self.headers)
-        response.raise_for_status()
+        #response.raise_for_status()
         #session.cookies contains stepUpCookie, vid, vs-access, vs-refresh and vs-trustxxx
 
         #Step 5: save only trustxxx session.cookies to file
@@ -86,40 +141,54 @@ class Verisure:
         with open(os.path.expanduser(cookieFileName), 'wb') as f:
             pickle.dump(self.session.cookies, f)
 
-            
+
+
     def renewToken(self):
 
-        urls =["https://m-api01.verisure.com/auth/token",
-                "https://m-api02.verisure.com/auth/token"]
+        urls =['https://m-api01.verisure.com/auth/token',
+                'https://m-api02.verisure.com/auth/token']
 
         for url in urls:
-            response = self.session.post(url, headers=self.headers, auth=(username, password))
-            response.raise_for_status()
-            
-            
-   def logout(self):
+            response = self.session.post(url, headers=self.headers)
+            #response.raise_for_status()
 
-        urls =["https://m-api01.verisure.com/auth/delete",
-                "https://m-api02.verisure.com/auth/delete"]
+
+
+    def logout(self):
+
+        urls =['https://m-api01.verisure.com/auth/delete',
+                'https://m-api02.verisure.com/auth/delete']
 
         for url in urls:
             response = self.session.delete(url, headers=self.headers)
-            response.raise_for_status()
+            #response.raise_for_status()
 
 
     def _doRequest(self, body):
 
-        urls =["https://m-api01.verisure.com/graphql",
-                "https://m-api02.verisure.com/graphql"]
+        urls =['https://m-api01.verisure.com/graphql',
+                'https://m-api02.verisure.com/graphql']
 
-        for url in urls:
-            response = self.session.post(url, headers=self.headers, data = json.dumps(list(body)))
-            response.raise_for_status()
+        try:
+            response = self.session.post(urls[0], headers=self.headers, data = json.dumps(list(body)))
+            #response.raise_for_status()
             response.encoding = 'utf-8'
-            if 'errors' not in json.loads(response.text):
-                return json.loads(response.text)
 
-            
+            if 'errors' in json.loads(response.text):
+                response = self.session.post(urls[1], headers=self.headers, data = json.dumps(list(body)))
+                #response.raise_for_status()
+                response.encoding = 'utf-8'
+
+                if 'errors' not in json.loads(response.text):
+                    return json.loads(response.text)
+
+        except Exception as e:
+            print("error in _doRequest")
+            print(e)
+
+        return {}
+
+
     def getAllInstallations(self):
 
         body =  [{
@@ -169,13 +238,22 @@ class Verisure:
                         "deviceId\n      name\n      initials\n      currentLocationTimestamp\n      deviceName\n      currentLocationId\n      __typename\n    }\n    __typename\n  }\n}\n"}]
 
         response = self._doRequest(body)
+
         out = dict()
 
         for d in response["data"]["installation"]["userTrackings"]:
             name = d["name"]
             out[name] = dict()
-            out[name]["currentLocationName"] = d["currentLocationName"]
-            out[name]["timestamp"] = arrow.get(d["currentLocationTimestamp"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+
+            if (d["currentLocationName"] != None):
+                out[name]["currentLocationName"] = d["currentLocationName"]
+            else:
+                out[name]["currentLocationName"] = "None"
+
+            if (d["currentLocationTimestamp"] != None):
+                out[name]["timestamp"] = arrow.get(d["currentLocationTimestamp"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+            else:
+                out[name]["timestamp"] = arrow.get('1970-01-01 00:00:00').format("YYYY-MM-DD HH:mm:ss")
 
         return out
 
@@ -267,6 +345,7 @@ class Verisure:
 
 
     def getEventLog(self, fromDate, toDate, eventCategories):
+
         #"eventCategories":["INTRUSION","FIRE","SOS","WATER","ANIMAL","TECHNICAL","WARNING","ARM","DISARM","LOCK","UNLOCK","PICTURE","CLIMATE","CAMERA_SETTINGS","DOORWINDOW_STATE_OPENED","DOORWINDOW_STATE_CLOSED"],
 
         body= [{
@@ -289,6 +368,7 @@ class Verisure:
         response = self._doRequest(body)
 
         out = dict()
+
         for d in response["data"]["installation"]["eventLog"]["pagedList"]:
             name = d["eventCategory"]
             if out.get(name) == None:
@@ -731,5 +811,3 @@ class Verisure:
             out[name] = d["currentState"]
 
         return out
-    
-
