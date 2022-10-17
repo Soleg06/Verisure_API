@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import requests
-import json
 import arrow
+import json
 import os
 import pickle
 from pprint import pprint
@@ -60,7 +60,7 @@ class Verisure:
 
     #def __del__(self):
 
-    #    self.logout()
+       # self.logout()
 
 
     def login(self, mfa:bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
@@ -80,30 +80,29 @@ class Verisure:
 
             for url in urls:
                 response = self.session.post(url, headers=self.headers, auth=(username, password))
-                #response.raise_for_status()
-                if 'errors' not in json.loads(response.text):
+                #pprint(response.text)
+                if 'errors' not in response.json():
                     self.getAllInstallations()
         else:
             try:
                 response = self.session.post(urls[0], headers=self.headers, auth=(username, password))
-                #pprint(json.loads(response.text))
                 print("login ")
                 print(urls[0])
-                #response.raise_for_status()
-                if 'errors' not in json.loads(response.text):
+                #pprint(response.json())
+                #pprint(response.status_code)
+                if 'errors' not in response.json():
                     self.getAllInstallations()
-
             except:
                 try:
                     response = self.session.post(urls[1], headers=self.headers, auth=(username, password))
-                    #pprint(json.loads(response.text))
-                    #response.raise_for_status()
-                    print("login exept ")
+                    print("login except ")
                     print(urls[1])
-                    if 'errors' not in json.loads(response.text):
+                    #pprint(response.json())
+                    #pprint(response.status_code)
+                    if 'errors' not in response.json():
                         self.getAllInstallations()
                 except Exception as e:
-                    print("error in _login exept")
+                    print("error in _login except")
                     print(e)
 
 
@@ -113,11 +112,9 @@ class Verisure:
 
         #Step 1: call auth/login with username and password and get a stepUpToken in reply valid 1200 seconds i.e. 20 minutes
         response = self.session.post("https://m-api01.verisure.com/auth/login", headers=self.headers, auth=(username, password))
-        #response.raise_for_status()
 
         #Step 2: call  auth/mfa and Verisure vill send you a SMS with a code valid for 300 seconds i.e 5 minutes
         response = self.session.post("https://m-api01.verisure.com/auth/mfa", headers=self.headers)
-        #response.raise_for_status()
 
         smsToken = input("Enter code sent by SMS: ")
         tok = dict()
@@ -125,12 +122,10 @@ class Verisure:
 
         #Step 3: call auth/mfa/validate with the SMS code and get an accesstoken in reply
         response = self.session.post("https://m-api01.verisure.com/auth/mfa/validate", headers=self.headers, data= json.dumps(tok))
-        #response.raise_for_status()
         #session.cookies contains stepUpCookie, vid, vs-access and vs-refresh
 
         #Step 4:  call auth/trust and get the trust token
         response = self.session.post("https://m-api01.verisure.com/auth/trust", headers=self.headers)
-        #response.raise_for_status()
         #session.cookies contains stepUpCookie, vid, vs-access, vs-refresh and vs-trustxxx
 
         #Step 5: save only trustxxx session.cookies to file
@@ -148,10 +143,15 @@ class Verisure:
         urls =['https://m-api01.verisure.com/auth/token',
                 'https://m-api02.verisure.com/auth/token']
 
-        for url in urls:
-            response = self.session.post(url, headers=self.headers)
-            #response.raise_for_status()
+        try:
+            response = self.session.post(urls[0], headers=self.headers)
+        except:
+            try:
+                response = self.session.post(urls[1], headers=self.headers)
 
+            except Exception as e:
+                print("error in renewToken")
+                print(e)
 
 
     def logout(self):
@@ -159,9 +159,15 @@ class Verisure:
         urls =['https://m-api01.verisure.com/auth/delete',
                 'https://m-api02.verisure.com/auth/delete']
 
-        for url in urls:
-            response = self.session.delete(url, headers=self.headers)
-            #response.raise_for_status()
+        try:
+            response = self.session.delete(urls[0], headers=self.headers)
+        except:
+            try:
+                response = self.session.delete(urls[1], headers=self.headers)
+
+            except Exception as e:
+                print("error in logout")
+                print(e)
 
 
     def _doRequest(self, body):
@@ -171,16 +177,20 @@ class Verisure:
 
         try:
             response = self.session.post(urls[0], headers=self.headers, data = json.dumps(list(body)))
-            #response.raise_for_status()
             response.encoding = 'utf-8'
-
-            if 'errors' in json.loads(response.text):
-                response = self.session.post(urls[1], headers=self.headers, data = json.dumps(list(body)))
-                #response.raise_for_status()
-                response.encoding = 'utf-8'
-
-                if 'errors' not in json.loads(response.text):
-                    return json.loads(response.text)
+            #pprint(response.json())
+            #pprint(response.status_code)
+            if 'errors' in response.json():
+                response2 = self.session.post(urls[1], headers=self.headers, data = json.dumps(list(body)))
+                response2.encoding = 'utf-8'
+                #pprint(response2.json())
+                #pprint(response2.status_code)
+                if 'errors' in response2.json():
+                    return {}
+                else:
+                    return response2.json()
+            else:
+                return response.json()
 
         except Exception as e:
             print("error in _doRequest")
