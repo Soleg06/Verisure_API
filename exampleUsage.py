@@ -6,79 +6,85 @@ import time
 username = "firstname.lastname@something.com"
 password = "**********"
 
-vs = verisureGrafqlAPI.Verisure()
-#vs.getMfaToken(False, username, password)
-vs.login(username, password)
+vs = olis_verisure_grafql.Verisure()
+#vs.getMfaToken(username, password)
+vs.login(False, username, password)
 #vs.getAllInstallations()
 
-while True:
-  print("Climate\n")
-  pprint(vs.getClimate())
+print("getBatteryProcessStatus\n")
+pprint(vs.getBatteryProcessStatus())
 
-  print("Doorwindow\n")
-  pprint(vs.getDoorWindow())
+print("climate\n")
+pprint(vs.getClimate())
 
-  print("Armstate\n")
-  pprint(vs.getArmState())
+print("doorwindow\n")
+pprint(vs.getDoorWindow())
 
-  print("Broadband\n")
-  pprint(vs.getBroadbandStatus())
+print("getPetType\n")
+pprint(vs.getPetType())
 
-  print("Smartplug\n")
-  pprint(vs.read_smartplug_state())
+print("getCommunication\n")
+pprint(vs.getCommunication())
 
-  print("Usertracking\n")
-  pprint(vs.userTracking())
+print("getCamera\n")
+pprint(vs.getCamera())
 
-  print("Vaccationmode\n")
-  pprint(vs.getVacationMode())
+print("armstate\n")
+pprint(vs.getArmState())
 
-  print("Eventlogcategories\n")
-  categories = vs.getEventLogCategories()
-  pprint(categories)
+print("bredband\n")
+pprint(vs.getBroadbandStatus())
 
-  print("Eventhistory\n")
-  #pprint(vs.getEventLog("2022-03-01", "2022-03-04", ['TECHNICAL','FIRE','SOS','INTRUSION','CLIMATE','WARNING','POWERCONTROL','PICTURE','ARM','DISARM','CAMERA_SETTINGS','DOORWINDOW_STATE_OPENED','DOORWINDOW_STATE_CLOSED']))
-  pprint(vs.getEventLog(arrow.now().shift(days=-7), arrow.now(), categories))
+print("smartplug\n")
+pprint(vs.read_smartplug_state())
 
-  print("getCommunications\n")
-  pprint(vs.getCommunication())
+print("usertracking\n")
+pprint(vs.userTracking())
 
-  print("getInstallation\n")
-  pprint(vs.getInstallation())
+print("vaccationmode\n")
+pprint(vs.getVacationMode())
 
-  print("getUsers\n")
-  pprint(vs.getUsers())
+#"eventCategories":["INTRUSION","FIRE","SOS","WATER","ANIMAL","TECHNICAL","WARNING","ARM","DISARM","LOCK","UNLOCK","PICTURE","CLIMATE","CAMERA_SETTINGS","DOORWINDOW_STATE_OPENED","DOORWINDOW_STATE_CLOSED"],
 
-  print("getvacation and petsettings\n")
-  pprint(vs.getVacationModeAndPetSetting())
-  time.sleep(5*60)
-  vs.renewToken() # renew the token using renew token cookie
-  
+print("eventlogcategories\n")
+categories = vs.getEventLogCategories()
+pprint(categories)
+
+print("History\n")
+#pprint(vs.getEventLog("2022-03-01", "2022-03-04", ['TECHNICAL','FIRE','SOS','INTRUSION','CLIMATE','WARNING','POWERCONTROL','PICTURE','ARM','DISARM','CAMERA_SETTINGS','DOORWINDOW_STATE_OPENED','DOORWINDOW_STATE_CLOSED']))
+pprint(vs.getEventLog(arrow.now().shift(days=-7), arrow.now(), categories))
+
+print("getCommunications\n")
+pprint(vs.getCommunication())
+
+print("getInstallation\n")
+pprint(vs.getInstallation())
+
+print("getUsers\n")
+pprint(vs.getUsers())
+
+print("getvaccation and petsettings\n")
+pprint(vs.getVacationModeAndPetSetting())
+
 print("getCentralUnit")
 pprint(vs.getCentralUnit())
 
-pprint(vs.getDevices())
-pprint(vs.isGuardianActivated())
-pprint(vs.getAllCardConfig())
-pprint(vs.getCapability())
-pprint(vs.chargeSms())
-pprint(vs.guardianSos())
-pprint(vs.permissions())
-pprint(vs.remainingSms())
-pprint(vs.smartButton())
-pprint(vs.smartLock())
-setArmStatusAway(self, code):
-setArmStatusHome(self, code):
-
+#pprint(vs.getDevices())
+#pprint(vs.isGuardianActivated())
+#pprint(vs.getAllCardConfig())
+#setArmStatusAway(code):
+#setArmStatusHome(code):
+#pprint(vs.getCapability())
+#pprint(vs.chargeSms())
 #disarmAlarm(self, code):
 #doorLock(self, deviceLabel):
 #doorUnlook(self, deviceLabel):
+#pprint(vs.guardianSos())
+#pprint(vs.permissions())
 #pollArmState(self, transactionID, futurestate):
 #pollLockState(self, transactionID, deviceLabel, futureState):
-#setSmartPlug(self, deviceLabel, state):
-#getSmartplugState(self, devicelabel):
-
-vs.logout()
-
-
+#pprint(vs.remainingSms())
+#pprint(vs.smartButton())
+#pprint(vs.smartLock())
+#setSmartPlug(deviceLabel, state):
+#getSmartplugState(devicelabel):
