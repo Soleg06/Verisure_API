@@ -1,41 +1,56 @@
 import verisureGrafqlAPI
 from pprint import pprint
 import arrow
+import time
 
 username = "firstname.lastname@something.com"
 password = "**********"
 
-vs = verisureGrafqlAPI.Verisure()
-#vs.getMfaToken(username, password) this works but using it keeps logging out my iphone app....
-vs.login(username, password)
+vs = olis_verisure_grafql.Verisure()
+#vs.getMfaToken(username, password)
+vs.login(False, username, password)
 #vs.getAllInstallations()
 
-print("Climate\n")
+print("getBatteryProcessStatus\n")
+pprint(vs.getBatteryProcessStatus())
+
+print("climate\n")
 pprint(vs.getClimate())
 
-print("Doorwindow\n")
+print("doorwindow\n")
 pprint(vs.getDoorWindow())
 
-print("Armstate\n")
+print("getPetType\n")
+pprint(vs.getPetType())
+
+print("getCommunication\n")
+pprint(vs.getCommunication())
+
+print("getCamera\n")
+pprint(vs.getCamera())
+
+print("armstate\n")
 pprint(vs.getArmState())
 
-print("Broadband\n")
+print("bredband\n")
 pprint(vs.getBroadbandStatus())
 
-print("Smartplug\n")
+print("smartplug\n")
 pprint(vs.read_smartplug_state())
 
-print("Usertracking\n")
+print("usertracking\n")
 pprint(vs.userTracking())
 
-print("Vaccationmode\n")
+print("vaccationmode\n")
 pprint(vs.getVacationMode())
 
-print("Eventlogcategories\n")
+#"eventCategories":["INTRUSION","FIRE","SOS","WATER","ANIMAL","TECHNICAL","WARNING","ARM","DISARM","LOCK","UNLOCK","PICTURE","CLIMATE","CAMERA_SETTINGS","DOORWINDOW_STATE_OPENED","DOORWINDOW_STATE_CLOSED"],
+
+print("eventlogcategories\n")
 categories = vs.getEventLogCategories()
 pprint(categories)
 
-print("Eventhistory\n")
+print("History\n")
 #pprint(vs.getEventLog("2022-03-01", "2022-03-04", ['TECHNICAL','FIRE','SOS','INTRUSION','CLIMATE','WARNING','POWERCONTROL','PICTURE','ARM','DISARM','CAMERA_SETTINGS','DOORWINDOW_STATE_OPENED','DOORWINDOW_STATE_CLOSED']))
 pprint(vs.getEventLog(arrow.now().shift(days=-7), arrow.now(), categories))
 
@@ -48,31 +63,28 @@ pprint(vs.getInstallation())
 print("getUsers\n")
 pprint(vs.getUsers())
 
-print("getvacation and petsettings\n")
+print("getvaccation and petsettings\n")
 pprint(vs.getVacationModeAndPetSetting())
 
 print("getCentralUnit")
 pprint(vs.getCentralUnit())
 
-pprint(vs.getDevices())
-pprint(vs.isGuardianActivated())
-pprint(vs.getAllCardConfig())
-pprint(vs.getCapability())
-pprint(vs.chargeSms())
-pprint(vs.guardianSos())
-pprint(vs.permissions())
-pprint(vs.remainingSms())
-pprint(vs.smartButton())
-pprint(vs.smartLock())
-setArmStatusAway(self, code):
-setArmStatusHome(self, code):
-
+#pprint(vs.getDevices())
+#pprint(vs.isGuardianActivated())
+#pprint(vs.getAllCardConfig())
+#setArmStatusAway(code):
+#setArmStatusHome(code):
+#pprint(vs.getCapability())
+#pprint(vs.chargeSms())
 #disarmAlarm(self, code):
 #doorLock(self, deviceLabel):
 #doorUnlook(self, deviceLabel):
+#pprint(vs.guardianSos())
+#pprint(vs.permissions())
 #pollArmState(self, transactionID, futurestate):
 #pollLockState(self, transactionID, deviceLabel, futureState):
-#setSmartPlug(self, deviceLabel, state):
-#getSmartplugState(self, devicelabel):
-
-
+#pprint(vs.remainingSms())
+#pprint(vs.smartButton())
+#pprint(vs.smartLock())
+#setSmartPlug(deviceLabel, state):
+#getSmartplugState(devicelabel):

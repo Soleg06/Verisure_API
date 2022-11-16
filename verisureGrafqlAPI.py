@@ -62,7 +62,7 @@ class Verisure:
         }
 
     def __del__(self):
-
+    
        self.logout()
        
        
@@ -111,30 +111,27 @@ class Verisure:
                     print("error in _login except")
                     print(e)
 
+
     def getMfaToken(self, username, password, cookieFileName='~/.verisure_mfa_cookie'):
 
         self.username = username
 
         # Step 1: call auth/login with username and password and get a stepUpToken in reply valid 1200 seconds i.e. 20 minutes
-        response = self.session.post(
-            "https://m-api01.verisure.com/auth/login", headers=self.headers, auth=(username, password))
+        response = self.session.post("https://m-api01.verisure.com/auth/login", headers=self.headers, auth=(username, password))
 
         # Step 2: call  auth/mfa and Verisure vill send you a SMS with a code valid for 300 seconds i.e 5 minutes
-        response = self.session.post(
-            "https://m-api01.verisure.com/auth/mfa", headers=self.headers)
+        response = self.session.post("https://m-api01.verisure.com/auth/mfa", headers=self.headers)
 
         smsToken = input("Enter code sent by SMS: ")
         tok = dict()
         tok["token"] = smsToken
 
         # Step 3: call auth/mfa/validate with the SMS code and get an accesstoken in reply
-        response = self.session.post(
-            "https://m-api01.verisure.com/auth/mfa/validate", headers=self.headers, data=json.dumps(tok))
+        response = self.session.post("https://m-api01.verisure.com/auth/mfa/validate", headers=self.headers, data=json.dumps(tok))
         # session.cookies contains stepUpCookie, vid, vs-access and vs-refresh
 
         # Step 4:  call auth/trust and get the trust token
-        response = self.session.post(
-            "https://m-api01.verisure.com/auth/trust", headers=self.headers)
+        response = self.session.post("https://m-api01.verisure.com/auth/trust", headers=self.headers)
         # session.cookies contains stepUpCookie, vid, vs-access, vs-refresh and vs-trustxxx
 
         # Step 5: save only trustxxx session.cookies to file
@@ -144,6 +141,7 @@ class Verisure:
         self.session.cookies["vid"] = None
         with open(os.path.expanduser(cookieFileName), 'wb') as f:
             pickle.dump(self.session.cookies, f)
+
 
     def renewToken(self):
 
@@ -160,6 +158,7 @@ class Verisure:
                 print("error in renewToken")
                 print(e)
 
+
     def logout(self):
 
         urls = ['https://m-api01.verisure.com/auth/logout',
@@ -175,20 +174,19 @@ class Verisure:
                 print("error in logout")
                 print(e)
 
+
     def _doRequest(self, body):
 
         urls = ['https://m-api01.verisure.com/graphql',
                 'https://m-api02.verisure.com/graphql']
 
         try:
-            response = self.session.post(
-                urls[0], headers=self.headers, data=json.dumps(list(body)))
+            response = self.session.post(urls[0], headers=self.headers, data=json.dumps(list(body)))
             response.encoding = 'utf-8'
             # pprint(response.json())
             # pprint(response.status_code)
             if 'errors' in response.json():
-                response2 = self.session.post(
-                    urls[1], headers=self.headers, data=json.dumps(list(body)))
+                response2 = self.session.post(urls[1], headers=self.headers, data=json.dumps(list(body)))
                 response2.encoding = 'utf-8'
                 # pprint(response2.json())
                 # pprint(response2.status_code)
@@ -205,6 +203,7 @@ class Verisure:
 
         return {}
 
+
     def getAllInstallations(self):
 
         body = [{
@@ -220,6 +219,7 @@ class Verisure:
             self.giid = d["giid"]
 
         return response
+
 
     def getBatteryProcessStatus(self):
 
@@ -242,6 +242,7 @@ class Verisure:
 
         return out
 
+
     def getClimate(self):
 
         body = [{
@@ -263,6 +264,7 @@ class Verisure:
                 'Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
 
         return out
+
 
     def userTracking(self):
 
@@ -295,6 +297,7 @@ class Verisure:
 
         return out
 
+
     def getAllCardConfig(self):
 
         body = [{
@@ -306,6 +309,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def getVacationMode(self):
 
@@ -332,8 +336,7 @@ class Verisure:
         if (response["data"]["installation"]["vacationMode"]["toDate"] == None):
             out[name]["toDate"] = None
         else:
-            out[name]["toDate"] = arrow.get(response["data"]["installation"]["vacationMode"]["toDate"]).to(
-                'Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+            out[name]["toDate"] = arrow.get(response["data"]["installation"]["vacationMode"]["toDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
 
         out[name]["contactName"] = response["data"]["installation"]["vacationMode"]["temporaryContactName"]
         out[name]["contactPhone"] = response["data"]["installation"]["vacationMode"]["temporaryContactPhone"]
@@ -368,6 +371,7 @@ class Verisure:
 
         return out
 
+
     def getEventLogCategories(self):
 
         body = [{
@@ -379,6 +383,7 @@ class Verisure:
         response = self._doRequest(body)
 
         return response["data"]["installation"]["notificationCategoryFilter"]
+
 
     def getEventLog(self, fromDate, toDate, eventCategories):
 
@@ -422,6 +427,7 @@ class Verisure:
 
         return out
 
+
     def getInstallation(self):
 
         body = [{
@@ -435,6 +441,7 @@ class Verisure:
         response = self._doRequest(body)
 
         return response["data"]["installation"]
+
 
     def getUsers(self):
 
@@ -453,6 +460,7 @@ class Verisure:
         response = self._doRequest(body)
 
         return response["data"]["users"]
+
 
     def getVacationModeAndPetSetting(self):
 
@@ -479,20 +487,19 @@ class Verisure:
         if (response["data"]["installation"]["vacationMode"]["fromDate"] == None):
             out[name]["toDate"] = None
         else:
-            arrow.get(response["data"]["installation"]["vacationMode"]["fromDate"]).to(
-                'Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+            arrow.get(response["data"]["installation"]["vacationMode"]["fromDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
 
         if (response["data"]["installation"]["vacationMode"]["toDate"] == None):
             out[name]["toDate"] = None
         else:
-            out[name]["toDate"] = arrow.get(response["data"]["installation"]["vacationMode"]["toDate"]).to(
-                'Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+            out[name]["toDate"] = arrow.get(response["data"]["installation"]["vacationMode"]["toDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
 
         out[name]["contactName"] = response["data"]["installation"]["vacationMode"]["temporaryContactName"]
         out[name]["contactPhone"] = response["data"]["installation"]["vacationMode"]["temporaryContactPhone"]
         out[name]["turnOffPetImmunity"] = response["data"]["installation"]["vacationMode"]["turnOffPetImmunity"]
 
         return out
+
 
     def getPetType(self):
 
@@ -504,6 +511,7 @@ class Verisure:
         response = self._doRequest(body)
 
         return response["data"]["installation"]["pettingSettings"]["petType"]
+
 
     def getCentralUnit(self):
 
@@ -524,6 +532,7 @@ class Verisure:
             out[name]["macAddressEthernet"] = d["macAddress"]["macAddressEthernet"]
 
         return out
+
 
     def getDevices(self):
 
@@ -547,6 +556,7 @@ class Verisure:
 
         return out
 
+
     def setArmStatusAway(self, code):
 
         body = [{
@@ -559,6 +569,7 @@ class Verisure:
         response = self._doRequest(body)
         return response
 
+
     def setArmStatusHome(self, code):
 
         body = [{
@@ -570,6 +581,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def getArmState(self):
 
@@ -592,6 +604,7 @@ class Verisure:
 
         return out
 
+
     def getBroadbandStatus(self):
 
         body = [{
@@ -611,6 +624,7 @@ class Verisure:
 
         return out
 
+
     def getCamera(self):
 
         body = [{"operationName":"Camera",
@@ -627,6 +641,7 @@ class Verisure:
 
         return response["data"]["installation"]["cameras"]
 
+
     def getCapability(self):
 
         body = [{
@@ -639,6 +654,7 @@ class Verisure:
         response = self._doRequest(body)
         return response
 
+
     def chargeSms(self):
 
         body = [{
@@ -649,6 +665,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def disarmAlarm(self, code):
 
@@ -662,6 +679,7 @@ class Verisure:
         response = self._doRequest(body)
         return response
 
+
     def doorLock(self, deviceLabel):
 
         body = [{
@@ -673,6 +691,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def doorUnlook(self, deviceLabel):
 
@@ -686,6 +705,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def getDoorWindow(self):
 
@@ -708,6 +728,7 @@ class Verisure:
 
         return out
 
+
     def guardianSos(self):
 
         body = [{
@@ -718,6 +739,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def isGuardianActivated(self):
 
@@ -732,6 +754,7 @@ class Verisure:
         response = self._doRequest(body)
         return response
 
+
     def permissions(self):
 
         body = [{
@@ -743,6 +766,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def pollArmState(self, transactionID, futurestate):
 
@@ -757,6 +781,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def pollLockState(self, transactionID, deviceLabel, futureState):
 
@@ -773,6 +798,7 @@ class Verisure:
         response = self._doRequest(body)
         return response
 
+
     def remainingSms(self):
 
         body = [{
@@ -783,6 +809,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def smartButton(self):
 
@@ -800,6 +827,7 @@ class Verisure:
         response = self._doRequest(body)
         return response
 
+
     def smartLock(self):
 
         body = [{
@@ -811,6 +839,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def setSmartPlug(self, deviceLabel, state):
 
@@ -825,6 +854,7 @@ class Verisure:
         response = self._doRequest(body)
         return response
 
+
     def getSmartplugState(self, devicelabel):
 
         body = [{
@@ -837,6 +867,7 @@ class Verisure:
 
         response = self._doRequest(body)
         return response
+
 
     def read_smartplug_state(self):
 
