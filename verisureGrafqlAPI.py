@@ -343,6 +343,7 @@ class Verisure:
 
         return out
 
+
     def getCommunication(self):
 
         body = [{
