@@ -283,12 +283,12 @@ class Verisure:
             name = d["name"]
             out[name] = dict()
 
-            if (d["currentLocationName"] != None):
+            if (d["currentLocationName"] is not None):
                 out[name]["currentLocationName"] = d["currentLocationName"]
             else:
                 out[name]["currentLocationName"] = "None"
 
-            if (d["currentLocationTimestamp"] != None):
+            if (d["currentLocationTimestamp"] is not None):
                 out[name]["timestamp"] = arrow.get(d["currentLocationTimestamp"]).to(
                     'Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
             else:
@@ -328,7 +328,7 @@ class Verisure:
         out[name]["active"] = response["data"]["installation"]["vacationMode"]["active"]
 
         if (response["data"]["installation"]["vacationMode"]["fromDate"] == None):
-            out[name]["toDate"] = None
+            out[name]["fromDate"] = None
         else:
             arrow.get(response["data"]["installation"]["vacationMode"]["fromDate"]).to(
                 'Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
