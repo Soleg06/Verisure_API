@@ -1,12 +1,13 @@
-import verisureGrafqlAPI
 from pprint import pprint
+
 import arrow
-import time
+
+from verisureGrafqlAPI import *
 
 username = "firstname.lastname@something.com"
 password = "**********"
 
-vs = olis_verisure_grafql.Verisure()
+vs = Verisure()
 #vs.getMfaToken(username, password)
 vs.login(False, username, password)
 #vs.getAllInstallations()
