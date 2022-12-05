@@ -59,7 +59,7 @@ class Verisure:
                     await self.getAllInstallations()
         else:
             try:
-                    out = await self._doSession(method="POST", url=urls[0], headers=self.headers, auth=self.auth)()
+                    out = await self._doSession(method="POST", url=urls[0], headers=self.headers, auth=self.auth)
                     print("login ")
                     print(urls[0])
                     if 'errors' not in out:
