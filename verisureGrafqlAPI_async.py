@@ -16,6 +16,7 @@ class Verisure:
     def __init__(self):
         self._username = None
         self._giid = None
+        self.tokenExpires = arrow.now("Europe/Stockholm")
         self._applicationID = "Python"
         self._headers = {
             "Content-Type": "application/json",
