@@ -5,6 +5,7 @@ import asyncio
 import os
 import pickle
 from pprint import pprint
+import structlog
 
 import aiohttp
 import arrow
@@ -13,6 +14,8 @@ import ujson
 
 class Verisure:
 
+    log = structlog.get_logger(__name__)
+    
     def __init__(self):
         self._username = None
         self._giid = None
@@ -27,11 +30,16 @@ class Verisure:
         self._session = aiohttp.ClientSession()
 
     async def _doSession(self, method, url, headers, data=None, params=None, auth=None):
-        async with self._session.request(method=method, url=url, headers=headers, data=data, params=params, auth=auth) as response:
-            try:
-                return await response.json()
-            except:
-                return await response.text()
+        try:
+            async with self._session.request(method=method, url=url, headers=headers, data=data, params=params, auth=auth) as response:
+                try:
+                    return await response.json()
+                except:
+                    return await response.text()
+                
+        except Exception as e:
+            self.log.error("Exception in _doSession", error=e)
+            return None
 
     async def login(self, mfa: bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
         _urls = ["https://m-api01.verisure.com/auth/login",
@@ -47,7 +55,7 @@ class Verisure:
                     self._session.cookies = pickle.load(f)
                     # session cookies set now
             except:
-                print("No tokenfile found \n")
+                self.log.error("No tokenfile found")
 
             for url in _urls:
                 out = await self._doSession(method="POST", url=url, headers=self._headers, auth=self.auth)
@@ -71,8 +79,8 @@ class Verisure:
                         await self.getAllInstallations()
 
                 except Exception as e:
-                    print("error in _login except")
-                    print(e)
+                    self.log.error("Exception in login", error=e)
+
 
     async def getMfaToken(self, username, password, cookieFileName='~/.verisure_mfa_cookie'):
         self._username = username
@@ -119,13 +127,13 @@ class Verisure:
                 self.tokenExpires = arrow.now("Europe/Stockholm").shift(seconds=result['accessTokenMaxAgeSeconds'])
 
             except Exception as e:
-                print("error in renewToken")
-                print(e)
+                self.log.error("Exception in renewToken", error=e)
+
 
     async def _validateToken(self):
         now = arrow.now("Europe/Stockholm")
         if (self.tokenExpires - now).total_seconds() < 30:
-            print("renewing token")
+            self.log.info("renewing token")
             await self.renewToken()
 
     async def logout(self):
@@ -141,8 +149,8 @@ class Verisure:
                 await self._session.close()
 
             except Exception as e:
-                print("error in logout")
-                print(e)
+                self.log.error("Exception in logout", error=e)
+
 
     async def _doRequest(self, body):
         _urls = ['https://m-api01.verisure.com/graphql',
@@ -161,9 +169,8 @@ class Verisure:
                 return out
 
         except Exception as e:
-            print("error in _doRequest")
-            print(e)
-
+            self.log.error("Exception in _doRequest", error=e)
+            
         return {}
 
     async def getAllInstallations(self):
