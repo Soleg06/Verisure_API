@@ -37,6 +37,10 @@ class Verisure:
                 except:
                     return await response.text()
                 
+        except aiohttp.ClientConnectorError as e:
+            self.log.error("Exception in _doSession Failed to connect to host", error=e)
+            pass
+                            
         except Exception as e:
             self.log.error("Exception in _doSession", error=e)
             return None
