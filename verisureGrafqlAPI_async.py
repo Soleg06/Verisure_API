@@ -15,9 +15,12 @@ import ujson
 class Verisure:
 
     log = structlog.get_logger(__name__)
-    
-    def __init__(self):
-        self._username = None
+
+    def __init__(self, mfa: bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
+        self._mfa = mfa
+        self._username = username
+        self._password = password
+        self._cookieFileName = cookieFileName
         self._giid = None
         self.tokenExpires = arrow.now("Europe/Stockholm")
         self._applicationID = "Python"
@@ -36,26 +39,26 @@ class Verisure:
                     return await response.json()
                 except:
                     return await response.text()
-                
+
         except aiohttp.ClientConnectorError as e:
             self.log.error("Exception in _doSession Failed to connect to host", error=e)
             pass
-                            
+
         except Exception as e:
             self.log.error("Exception in _doSession", error=e)
             return None
 
-    async def login(self, mfa: bool, username, password, cookieFileName='~/.verisure_mfa_cookie'):
+    async def login(self):
+        self.log.info("trying login")
         _urls = ["https://m-api01.verisure.com/auth/login",
                  "https://m-api02.verisure.com/auth/login"]
 
-        self.auth = aiohttp.BasicAuth(username, password)
-        self._username = username
+        self.auth = aiohttp.BasicAuth(self._username, self._password)
 
-        if mfa:
+        if self._mfa:
             # with mfa get the trustxxx token from saved file
             try:
-                with open(os.path.expanduser(cookieFileName), 'rb') as f:
+                with open(os.path.expanduser(self._cookieFileName), 'rb') as f:
                     self._session.cookies = pickle.load(f)
                     # session cookies set now
             except:
@@ -83,12 +86,11 @@ class Verisure:
                         await self.getAllInstallations()
 
                 except Exception as e:
-                    self.log.error("Exception in login", error=e)
+                    self.log.error("Exception in login", out=out, error=e)
 
+    async def getMfaToken(self):
 
-    async def getMfaToken(self, username, password, cookieFileName='~/.verisure_mfa_cookie'):
-        self._username = username
-        self.auth = aiohttp.BasicAuth(username, password)
+        self.auth = aiohttp.BasicAuth(self._username, self._password)
 
         # Step 1: call auth/login with username and password and get a stepUpToken in reply valid 1200 seconds i.e. 20 minutes
         await self._doSession(method="POST", url="https://m-api01.verisure.com/auth/login", headers=self._headers, auth=self.auth)
@@ -115,7 +117,7 @@ class Verisure:
         self._session.cookies["vs-stepup"] = None
         self._session.cookies["vs-refresh"] = None
         self._session.cookies["vid"] = None
-        with open(os.path.expanduser(cookieFileName), 'wb') as f:
+        with open(os.path.expanduser(self._cookieFileName), 'wb') as f:
             pickle.dump(self._session.cookies, f)
 
     async def renewToken(self):
@@ -128,12 +130,16 @@ class Verisure:
         except:
             try:
                 result = await self._doSession(method="POST", url=_urls[1], headers=self._headers)
-                self.tokenExpires = arrow.now("Europe/Stockholm").shift(seconds=result['accessTokenMaxAgeSeconds'])
+                if "accessTokenMaxAgeSeconds" in result:
+                    self.tokenExpires = arrow.now("Europe/Stockholm").shift(seconds=result['accessTokenMaxAgeSeconds'])
+                else:
+                    self.log.warning("validateToken cant work without a valid tokenExpires", tokenExpires=self.tokenExpires, error=e)
+                    await self.login()
 
             except Exception as e:
-                self.log.error("Exception in renewToken", error=e)
-
-
+                self.log.error("Exception in renewToken", result=result, error=e)
+                await self.login()
+                    
     async def _validateToken(self):
         now = arrow.now("Europe/Stockholm")
         if (self.tokenExpires - now).total_seconds() < 30:
@@ -155,7 +161,6 @@ class Verisure:
             except Exception as e:
                 self.log.error("Exception in logout", error=e)
 
-
     async def _doRequest(self, body):
         _urls = ['https://m-api01.verisure.com/graphql',
                  'https://m-api02.verisure.com/graphql']
@@ -174,7 +179,7 @@ class Verisure:
 
         except Exception as e:
             self.log.error("Exception in _doRequest", error=e)
-            
+
         return {}
 
     async def getAllInstallations(self):
