@@ -723,7 +723,7 @@ class Verisure:
         for d in response["data"]["installation"]["doorWindows"]:
             name = d["area"]
             out[name] = dict()
-            out[name]["state"] = d["state"]
+            out[name]['state'] = d['state']
             out[name]["timestamp"] = arrow.get(d["reportTime"]).to(
                 'Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
 

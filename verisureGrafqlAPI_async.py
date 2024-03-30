@@ -24,12 +24,10 @@ class Verisure:
         self._giid = None
         self.tokenExpires = arrow.now("Europe/Stockholm")
         self._applicationID = "Python"
-        self._headers = {
-            "Content-Type": "application/json",
-            "Host": "m-api01.verisure.com",
-            "Cache-Control": "no-cache",
-            "APPLICATION_ID": self._applicationID
-        }
+        self._headers = {"Content-Type": "application/json",
+                         "Host": "m-api01.verisure.com",
+                         "Cache-Control": "no-cache",
+                         "APPLICATION_ID": self._applicationID}
         self._session = aiohttp.ClientSession()
 
     async def _doSession(self, method, url, headers, data=None, params=None, auth=None):
@@ -99,7 +97,7 @@ class Verisure:
         await self._doSession(method="POST", url="https://m-api01.verisure.com/auth/mfa", headers=self._headers)
 
         smsToken = input("Enter code sent by SMS: ")
-        tok = dict()
+        tok = {}
         tok["token"] = smsToken
 
         # Step 3: call auth/mfa/validate with the SMS code and get an accesstoken in reply
@@ -139,7 +137,7 @@ class Verisure:
             except Exception as e:
                 self.log.error("Exception in renewToken", result=result, error=e)
                 await self.login()
-                    
+
     async def _validateToken(self):
         now = arrow.now("Europe/Stockholm")
         if (self.tokenExpires - now).total_seconds() < 30:
@@ -207,13 +205,12 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
         for d in response["data"]["installation"]["batteryDevices"]:
-            name = d["device"]["area"] + "/" + d["device"]["gui"]["label"]
-            out[name] = dict()
-            out[name]["batteryHealth"] = d["batteryHealth"]
-            out[name]["estimatedRemainingBatteryLifetime"] = d["estimatedRemainingBatteryLifetime"]
-            out[name]["recommendedToChange"] = d["recommendedToChange"]
+            name = f"{d['device']['area']}/{d['device']['gui']['label']}"
+            out[name] = {"batteryHealth": d["batteryHealth"],
+                         "estimatedRemainingBatteryLifetime": d["estimatedRemainingBatteryLifetime"],
+                         "recommendedToChange": d["recommendedToChange"]}
 
         return out
 
@@ -228,12 +225,11 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
         for d in response["data"]["installation"]["climates"]:
             name = d["device"]["area"] + "/" + d["device"]["gui"]["label"]
-            out[name] = dict()
-            out[name]["temperature"] = d["temperatureValue"]
-            out[name]["timestamp"] = arrow.get(d["temperatureTimestamp"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+            out[name] = {"temperature": d["temperatureValue"],
+                         "timestamp": arrow.get(d["temperatureTimestamp"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")}
 
         return out
 
@@ -247,21 +243,17 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
 
         for d in response["data"]["installation"]["userTrackings"]:
             name = d["name"]
-            out[name] = dict()
 
             if (d["currentLocationName"] is not None):
-                out[name]["currentLocationName"] = d["currentLocationName"]
+                out[name] = {"currentLocationName": d["currentLocationName"],
+                             "timestamp": arrow.get(d["currentLocationTimestamp"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")}
             else:
-                out[name]["currentLocationName"] = "None"
-
-            if (d["currentLocationTimestamp"] is not None):
-                out[name]["timestamp"] = arrow.get(d["currentLocationTimestamp"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
-            else:
-                out[name]["timestamp"] = arrow.get('1970-01-01 00:00:00').format("YYYY-MM-DD HH:mm:ss")
+                out[name] = {"currentLocationName": "None",
+                             "timestamp": '1970-01-01 00:00:00'}
 
         return out
 
@@ -285,21 +277,16 @@ class Verisure:
             "temporaryContactPhone\n      active\n      __typename\n    }\n    __typename\n  }\n}\n"}]
 
         response = await self._doRequest(_body)
-        out = dict()
+        out = {}
 
         name = response["data"]["installation"]["vacationMode"]["__typename"]
-        out[name] = dict()
-        out[name]["active"] = response["data"]["installation"]["vacationMode"]["active"]
+        out[name] = {"active": response["data"]["installation"]["vacationMode"]["active"]}
 
-        if (response["data"]["installation"]["vacationMode"]["fromDate"] == None):
-            out[name]["fromDate"] = None
-        else:
-            arrow.get(response["data"]["installation"]["vacationMode"]["fromDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+        _fromDate = response["data"]["installation"]["vacationMode"]["fromDate"]
+        out[name]["fromDate"] = arrow.get(_fromDate).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss") if _fromDate is not None else None
 
-        if (response["data"]["installation"]["vacationMode"]["toDate"] == None):
-            out[name]["toDate"] = None
-        else:
-            out[name]["toDate"] = arrow.get(response["data"]["installation"]["vacationMode"]["toDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+        _toDate = response["data"]["installation"]["vacationMode"]["fromDate"]
+        out[name]["toDate"] = arrow.get(_toDate).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss") if _toDate is not None else None
 
         out[name]["contactName"] = response["data"]["installation"]["vacationMode"]["temporaryContactName"]
         out[name]["contactPhone"] = response["data"]["installation"]["vacationMode"]["temporaryContactPhone"]
@@ -316,17 +303,16 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
         for d in response["data"]["installation"]["communicationState"]:
             name = d["device"]["area"]
-            if out.get(name) == None:
+            if name not in out:
                 out[name] = list()
 
-            part = dict()
-            part["result"] = d["result"]
-            part["hardwareCarrierType"] = d["hardwareCarrierType"]
-            part["mediaType"] = d["mediaType"]
-            part["timestamp"] = arrow.get(d["testDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+            part = {"result": d["result"],
+                    "hardwareCarrierType": d["hardwareCarrierType"],
+                    "mediaType": d["mediaType"],
+                    "timestamp": arrow.get(d["testDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")}
 
             out[name].append(part)
 
@@ -355,9 +341,9 @@ class Verisure:
                 "eventCategories": eventCategories,
                 "giid": self._giid,
                 "eventContactIds": [],
-                "fromDate":arrow.get(fromDate).format("YYYYMMDD"),
-                "toDate":arrow.get(toDate).format("YYYYMMDD")},
-            "query":"query EventLog($giid: String!, $offset: Int!, $pagesize: Int!, $eventCategories: [String], $fromDate: String, $toDate: String, $eventContactIds: [String]) {\n  installation(giid: $giid) {\n"
+                "fromDate": arrow.get(fromDate).format("YYYYMMDD"),
+                "toDate": arrow.get(toDate).format("YYYYMMDD")},
+            "query": "query EventLog($giid: String!, $offset: Int!, $pagesize: Int!, $eventCategories: [String], $fromDate: String, $toDate: String, $eventContactIds: [String]) {\n  installation(giid: $giid) {\n"
             "eventLog(offset: $offset, pagesize: $pagesize, eventCategories: $eventCategories, eventContactIds: $eventContactIds, fromDate: $fromDate, toDate: $toDate) {\n      moreDataAvailable\n"
             "pagedList {\n        device {\n          deviceLabel\n          area\n          gui {\n            label\n            __typename\n          }\n          __typename\n        }\n"
             "arloDevice {\n          name\n          __typename\n        }\n        gatewayArea\n        eventType\n        eventCategory\n        eventId\n        eventTime\n        userName\n"
@@ -365,21 +351,22 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
 
         for d in response["data"]["installation"]["eventLog"]["pagedList"]:
-            name = d["eventCategory"]
-            if out.get(name) == None:
-                out[name] = list()
+            eventCategory = d["eventCategory"]
+            if eventCategory not in out:
+                out[eventCategory] = list()
 
-            part = dict()
-            part["device"] = d["device"]["area"]
-            part["timestamp"] = arrow.get(d["eventTime"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
-            if (name in ["ARM", "DISARM"]):
+            part = {"device": d["device"]["area"],
+                    "timestamp": arrow.get(d["eventTime"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")}
+            if eventCategory in ["ARM", "DISARM"]:
                 part["user"] = d["userName"]
                 part["armState"] = d["armState"]
+            elif eventCategory == "INTRUSION":
+                part["armState"] = d["armState"]
 
-            out[name].append(part)
+            out[eventCategory].append(part)
 
         return out
 
@@ -424,25 +411,20 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
+        out["petSettings"] = {}
         for d in response["data"]["installation"]["petSettings"]["devices"]:
-            name = d["area"]
-            out[name] = dict()
-            out[name]["petSettingsActive"] = d["petSettingsActive"]
+            area = d["area"]
+            out["petSettings"][area] = d["petSettingsActive"]
 
         name = response["data"]["installation"]["vacationMode"]["__typename"]
-        out[name] = dict()
-        out[name]["active"] = response["data"]["installation"]["vacationMode"]["active"]
+        out[name] = {"active": response["data"]["installation"]["vacationMode"]["active"]}
 
-        if (response["data"]["installation"]["vacationMode"]["fromDate"] == None):
-            out[name]["toDate"] = None
-        else:
-            arrow.get(response["data"]["installation"]["vacationMode"]["fromDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+        _fromDate = response["data"]["installation"]["vacationMode"]["fromDate"]
+        out[name]["fromDate"] = arrow.get(_fromDate).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss") if _fromDate is not None else None
 
-        if (response["data"]["installation"]["vacationMode"]["toDate"] == None):
-            out[name]["toDate"] = None
-        else:
-            out[name]["toDate"] = arrow.get(response["data"]["installation"]["vacationMode"]["toDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+        _toDate = response["data"]["installation"]["vacationMode"]["fromDate"]
+        out[name]["toDate"] = arrow.get(_toDate).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss") if _toDate is not None else None
 
         out[name]["contactName"] = response["data"]["installation"]["vacationMode"]["temporaryContactName"]
         out[name]["contactPhone"] = response["data"]["installation"]["vacationMode"]["temporaryContactPhone"]
@@ -470,12 +452,11 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
         for d in response["data"]["installation"]["centralUnits"]:
             name = d["device"]["area"]
-            out[name] = dict()
-            out[name]["label"] = d["device"]["gui"]["label"]
-            out[name]["macAddressEthernet"] = d["macAddress"]["macAddressEthernet"]
+            out[name] = {"label": d["device"]["gui"]["label"],
+                         "macAddressEthernet": d["macAddress"]["macAddressEthernet"]}
 
         return out
 
@@ -532,12 +513,11 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
         name = response["data"]["installation"]["armState"]["__typename"]
-        out[name] = dict()
-        out[name]["statusType"] = response["data"]["installation"]["armState"]["statusType"]
-        out[name]["changedVia"] = response["data"]["installation"]["armState"]["changedVia"]
-        out[name]["timestamp"] = arrow.get(response["data"]["installation"]["armState"]["date"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+        out[name] = {"statusType": response["data"]["installation"]["armState"]["statusType"],
+                     "changedVia": response["data"]["installation"]["armState"]["changedVia"],
+                     "timestamp": arrow.get(response["data"]["installation"]["armState"]["date"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")}
 
         return out
 
@@ -550,11 +530,10 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
         name = response["data"]["installation"]["broadband"]["__typename"]
-        out[name] = dict()
-        out[name]["connected"] = response["data"]["installation"]["broadband"]["isBroadbandConnected"]
-        out[name]["timestamp"] = arrow.get(response["data"]["installation"]["broadband"]["testDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+        out[name] = {"connected": response["data"]["installation"]["broadband"]["isBroadbandConnected"],
+                     "timestamp": arrow.get(response["data"]["installation"]["broadband"]["testDate"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")}
 
         return out
 
@@ -638,12 +617,11 @@ class Verisure:
 
         response = await self._doRequest(_body)
 
-        out = dict()
+        out = {}
         for d in response["data"]["installation"]["doorWindows"]:
             name = d["area"]
-            out[name] = dict()
-            out[name]["state"] = d["state"]
-            out[name]["timestamp"] = arrow.get(d["reportTime"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")
+            out[name] = {'state': d['state'],
+                         "timestamp": arrow.get(d["reportTime"]).to('Europe/Stockholm').format("YYYY-MM-DD HH:mm:ss")}
 
         return out
 
@@ -776,7 +754,7 @@ class Verisure:
             "isHazardous\n      __typename\n    }\n    __typename\n  }\n}\n"}]
 
         response = await self._doRequest(__body)
-        out = dict()
+        out = {}
 
         for d in response["data"]["installation"]["smartplugs"]:
             name = d["device"]["area"]
