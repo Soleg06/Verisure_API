@@ -463,15 +463,19 @@ class Verisure:
         for d in response["data"]["installation"]["eventLog"]["pagedList"]:
             eventCategory = d["eventCategory"]
             if eventCategory not in out:
-                out[eventCategory] = list()
+                out[eventCategory] = []
+                
+            if (isinstance(d.get("device"), dict) and "area" in d["device"] and "eventTime" in d):
+                part = {"device": d["device"]["area"], "timestamp": arrow.get(d["eventTime"]).to(self.TIME_ZONE).format(self.DATE_FORMAT)}
 
-            part = {"device": d["device"]["area"],
-                    "timestamp": arrow.get(d["eventTime"]).to(self.TIME_ZONE).format(self.DATE_FORMAT)}
-            if eventCategory in ["ARM", "DISARM"]:
-                part["user"] = d["userName"]
-                part["armState"] = d["armState"]
-            elif eventCategory == "INTRUSION":
-                part["armState"] = d["armState"]
+            elif (isinstance(d.get("arloDevice"), dict) and "name" in d["arloDevice"] and "eventTime" in d):
+                part = {"device": d["arloDevice"]["name"], "timestamp": arrow.get(d["eventTime"]).to(self.TIME_ZONE).format(self.DATE_FORMAT)}
+
+            if eventCategory in {"ARM", "DISARM"} and all(k in d for k in ("userName", "armState")):
+                part.update({"user": d["userName"], "armState": d["armState"]})
+
+            elif eventCategory == "INTRUSION" and "armState" in d:
+                part.update({"armState": d["armState"]})
 
             out[eventCategory].append(part)
 
